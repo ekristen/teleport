@@ -410,24 +410,72 @@ type ClaimMapping struct {
 	// Value is claim value to match
 	Value string `json:"value"`
 	// Roles is a list of teleport roles to match
-	Roles []string `json:"roles"`
+	Roles []string `json:"roles,omitempty"`
+	// RoleTemplate is
+	RoleTemplate RoleTemplate `json:"role_template,omitempty"`
 }
 
 // ClaimMappingSchema is JSON schema for claim mapping
-const ClaimMappingSchema = `{
+var ClaimMappingSchema = fmt.Sprintf(`{
   "type": "object",
   "additionalProperties": false,
-  "required": ["claim", "value", "roles"],
+  "required": ["claim", "value" ],
   "properties": {
-     "claim": {"type": "string"}, 
-     "value": {"type": "string"},
-     "roles": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
+    "claim": {"type": "string"},
+    "value": {"type": "string"},
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "string"
       }
-   }
+    },
+    "role_template": %v
+  }
+}`, RoleTemplateSchema)
+
+type RoleTemplate struct {
+	Name          string              `yaml:name`
+	MaxSessionTTL Duration            `yaml:"max_session_ttl"`
+	ForwardAgent  bool                `yaml:"forward_agent"`
+	Logins        []string            `yaml:"logins,omitempty"`
+	NodeLabels    map[string]string   `yaml:"node_labels,omitempty"`
+	Namespaces    []string            `yaml:"namespaces,omitempty"`
+	Resources     map[string][]string `yaml:"resources,omitempty"`
+}
+
+const RoleTemplateSchema = `{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [ "name", "logins" ],
+  "properties": {
+    "name": {"type": "string"},
+    "max_session_ttl": {"type": "string"},
+    "forward_agent": {"type": "boolean"},
+    "node_labels": {
+      "type": "object",
+      "patternProperties": {
+         "^[a-zA-Z/.0-9_]$":  { "type": "string" }
+      }
+    },
+    "namespaces": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "logins": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "resources": {
+      "type": "object",
+      "patternProperties": {
+         "^[a-zA-Z/.0-9_]$":  { "type": "array", "items": {"type": "string"} }
+       }
+    }
+  }
 }`
 
 // OIDCConnectorV1 specifies configuration for Open ID Connect compatible external
