@@ -18,6 +18,7 @@ package config
 import (
 	"encoding/base64"
 	"fmt"
+	"time"
 
 	"gopkg.in/check.v1"
 )
@@ -45,8 +46,8 @@ func (s *FileTestSuite) TestAuthenticationSection(c *check.C) {
 		// 0 - local with otp
 		{
 			`
-auth_service: 
-  authentication: 
+auth_service:
+  authentication:
     type: local
     second_factor: otp
 `,
@@ -58,8 +59,8 @@ auth_service:
 		// 1 - local auth without otp
 		{
 			`
-auth_service: 
-  authentication: 
+auth_service:
+  authentication:
     type: local
     second_factor: off
 `,
@@ -131,6 +132,58 @@ auth_service:
 								"dba",
 								"backup",
 								"root",
+							},
+						},
+					},
+				},
+			},
+		},
+		// 4 - oidc role templates
+		{
+			`
+auth_service:
+  authentication:
+    type: oidc
+    oidc:
+      id: google
+      redirect_url: "https://localhost:3080/v1/webapi/oidc/callback"
+      client_id: id-from-google.apps.googleusercontent.com
+      client_secret: secret-key-from-google
+      issuer_url: "https://accounts.google.com"
+      display: whaterver
+      scope: [ "roles" ]
+      claims_to_roles:
+        - claim: roles
+          value: teleport-user
+          role_template:
+            name: "{{.user}}"
+            max_session_ttl: 90h0m0s
+            logins: ["{{.claims.nickname}}"]
+            node_labels:
+              "*": "*"
+`,
+
+			&AuthenticationConfig{
+				Type: "oidc",
+				OIDC: &OIDCConnector{
+					ID:           "google",
+					RedirectURL:  "https://localhost:3080/v1/webapi/oidc/callback",
+					ClientID:     "id-from-google.apps.googleusercontent.com",
+					ClientSecret: "secret-key-from-google",
+					IssuerURL:    "https://accounts.google.com",
+					Display:      "whaterver",
+					Scope: []string{
+						"roles",
+					},
+					ClaimsToRoles: []ClaimMapping{
+						ClaimMapping{
+							Claim: "roles",
+							Value: "teleport-user",
+							RoleTemplate: RoleTemplate{
+								Name:          "{{.user}}",
+								MaxSessionTTL: 90 * 60 * time.Minute,
+								Logins:        []string{"{{.claims.nickname}}"},
+								NodeLabels:    map[string]string{"*": "*"},
 							},
 						},
 					},

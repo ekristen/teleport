@@ -615,7 +615,20 @@ type ClaimMapping struct {
 	// Value is claim value to match
 	Value string `yaml:"value"`
 	// Roles is a list of teleport roles to match
-	Roles []string `yaml:"roles"`
+	Roles []string `yaml:"roles,omitempty"`
+	// RoleTemplate is a template for a role that will be filled
+	// with data from claims.
+	RoleTemplate RoleTemplate `yaml:"role_template,omitempty"`
+}
+
+type RoleTemplate struct {
+	Name          string              `yaml:name`
+	MaxSessionTTL time.Duration       `yaml:"max_session_ttl"`
+	ForwardAgent  bool                `yaml:"forward_agent"`
+	Logins        []string            `yaml:"logins,omitempty"`
+	NodeLabels    map[string]string   `yaml:"node_labels,omitempty"`
+	Namespaces    []string            `yaml:"namespaces,omitempty"`
+	Resources     map[string][]string `yaml:"resources,omitempty"`
 }
 
 // OIDCConnector specifies configuration fo Open ID Connect compatible external
@@ -675,6 +688,11 @@ func (o *OIDCConnector) Parse() (services.OIDCConnector, error) {
 		return nil, trace.Wrap(err)
 	}
 	return v2, nil
+}
+
+// Check makes sure we have valid OIDC connector configuration.
+func (o *OIDCConnector) Check() error {
+	return nil
 }
 
 type U2F struct {
