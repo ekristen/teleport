@@ -17,9 +17,11 @@ limitations under the License.
 package services
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"text/template"
 
 	"github.com/gravitational/teleport/lib/utils"
 
@@ -53,6 +55,8 @@ type OIDCConnector interface {
 	GetClaims() []string
 	// MapClaims maps claims to roles
 	MapClaims(claims jose.Claims) []string
+	// RoleFromTemplate creates a role from a template.
+	RoleFromTemplate(claims jose.Claims) (Role, error)
 	// Check checks OIDC connector for errors
 	Check() error
 	// SetClientSecret sets client secret to some value
@@ -314,12 +318,38 @@ func (o *OIDCConnectorV2) MapClaims(claims jose.Claims) []string {
 	return utils.Deduplicate(roles)
 }
 
-func executeTemplate(raw string, claims jose.Claims) (string, error) {
-	return raw, nil
+func executeStringTemplate(raw string, claims jose.Claims) (string, error) {
+	tmpl, err := template.New("dynamic-roles").Parse(raw)
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, claims)
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+
+	return buf.String(), nil
 }
 
-func executeTemplates(raw []string, claims jose.Claims) ([]string, error) {
-	return raw, nil
+func executeSliceTemplate(raw []string, claims jose.Claims) ([]string, error) {
+	var sl []string
+
+	for _, v := range raw {
+		tmpl, err := template.New("dynamic-roles").Parse(v)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+		var buf bytes.Buffer
+		err = tmpl.Execute(&buf, claims)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		sl = append(sl, buf.String())
+	}
+
+	return sl, nil
 }
 
 func (o *OIDCConnectorV2) RoleFromTemplate(claims jose.Claims) (Role, error) {
@@ -335,12 +365,12 @@ func (o *OIDCConnectorV2) RoleFromTemplate(claims jose.Claims) (Role, error) {
 				// check if we have a role template for this match
 				roleTemplate := mapping.RoleTemplate
 				if roleTemplate != nil {
-					// at the moment, only allow templating in name and logins
-					executedName, err := executeTemplate(roleTemplate.Name, claims)
+					// at the moment, only allow templating for role name and logins
+					executedName, err := executeStringTemplate(roleTemplate.Name, claims)
 					if err != nil {
 						return nil, trace.Wrap(err)
 					}
-					executedLogins, err := executeTemplates(roleTemplate.Logins, claims)
+					executedLogins, err := executeSliceTemplate(roleTemplate.Logins, claims)
 					if err != nil {
 						return nil, trace.Wrap(err)
 					}

@@ -17,10 +17,12 @@ package services
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gravitational/teleport/lib/defaults"
 	"github.com/gravitational/teleport/lib/utils"
 
+	"github.com/coreos/go-oidc/jose"
 	"gopkg.in/check.v1"
 )
 
@@ -52,9 +54,9 @@ func (s *OIDCSuite) TestUnmarshal(c *check.C) {
             "claim": "roles",
             "value": "teleport-user",
             "role_template": {
-              "name": "{{.user}}",
+              "name": "{{index . \"email\"}}",
               "max_session_ttl": "90h0m0s",
-              "logins": ["{{.claims.nickname}}"],
+              "logins": ["{{index . \"nickname\"}}", "root"],
               "node_labels": {
                 "*": "*"
               }
@@ -83,10 +85,10 @@ func (s *OIDCSuite) TestUnmarshal(c *check.C) {
 					Claim: "roles",
 					Value: "teleport-user",
 					RoleTemplate: &RoleTemplate{
-						Name:   "{{.user}}",
-						Logins: []string{"{{.claims.nickname}}"},
+						Name:   `{{index . "email"}}`,
+						Logins: []string{`{{index . "nickname"}}`, `root`},
 						// TODO(russjones): These two need to be added back and work...
-						//MaxSessionTTL: NewDuration(90 * 24 * time.Hour),
+						//MaxSessionTTL: NewDuration(90 * time.Hour),
 						//NodeLabels:    map[string]string{"*": "*"},
 					},
 				},
@@ -97,4 +99,59 @@ func (s *OIDCSuite) TestUnmarshal(c *check.C) {
 	oc, err := GetOIDCConnectorMarshaler().UnmarshalOIDCConnector([]byte(input))
 	c.Assert(err, check.IsNil)
 	c.Assert(oc, check.DeepEquals, &output)
+}
+
+func (s *OIDCSuite) TestRoleFromTemplate(c *check.C) {
+	oidcConnector := OIDCConnectorV2{
+		Kind:    KindOIDCConnector,
+		Version: V2,
+		Metadata: Metadata{
+			Name:      "google",
+			Namespace: defaults.Namespace,
+		},
+		Spec: OIDCConnectorSpecV2{
+			IssuerURL:    "https://accounts.google.com",
+			ClientID:     "id-from-google.apps.googleusercontent.com",
+			ClientSecret: "secret-key-from-google",
+			RedirectURL:  "https://localhost:3080/v1/webapi/oidc/callback",
+			Display:      "whatever",
+			Scope:        []string{"roles"},
+			ClaimsToRoles: []ClaimMapping{
+				ClaimMapping{
+					Claim: "roles",
+					Value: "teleport-user",
+					RoleTemplate: &RoleTemplate{
+						Name:   `{{index . "email"}}`,
+						Logins: []string{`{{index . "nickname"}}`, `root`},
+						// TODO(russjones): These two need to be added back and work...
+						//MaxSessionTTL: NewDuration(90 * time.Hour),
+						//NodeLabels:    map[string]string{"*": "*"},
+					},
+				},
+			},
+		},
+	}
+
+	// create some claims
+	var claims = make(jose.Claims)
+	claims.Add("roles", "teleport-user")
+	claims.Add("email", "foo@example.com")
+	claims.Add("nickname", "foo")
+	claims.Add("full_name", "foo bar")
+
+	role, err := oidcConnector.RoleFromTemplate(claims)
+	c.Assert(err, check.IsNil)
+
+	outRole, err := NewRole("foo@example.com", RoleSpecV2{
+		Logins: []string{"foo", "root"},
+		// TODO(russjones): Why 30h here?
+		MaxSessionTTL: NewDuration(30 * time.Hour),
+		// TODO(russjones): We should set these to something?
+		NodeLabels:   nil,
+		Namespaces:   nil,
+		Resources:    nil,
+		ForwardAgent: false,
+	})
+	c.Assert(err, check.IsNil)
+	c.Assert(role, check.DeepEquals, outRole)
 }
