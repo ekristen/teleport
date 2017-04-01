@@ -82,7 +82,7 @@ func (s *OIDCSuite) TestUnmarshal(c *check.C) {
 				ClaimMapping{
 					Claim: "roles",
 					Value: "teleport-user",
-					RoleTemplate: RoleTemplate{
+					RoleTemplate: &RoleTemplate{
 						Name:   "{{.user}}",
 						Logins: []string{"{{.claims.nickname}}"},
 						// TODO(russjones): These two need to be added back and work...

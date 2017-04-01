@@ -314,6 +314,57 @@ func (o *OIDCConnectorV2) MapClaims(claims jose.Claims) []string {
 	return utils.Deduplicate(roles)
 }
 
+func executeTemplate(raw string, claims jose.Claims) (string, error) {
+	return raw, nil
+}
+
+func executeTemplates(raw []string, claims jose.Claims) ([]string, error) {
+	return raw, nil
+}
+
+func (o *OIDCConnectorV2) RoleFromTemplate(claims jose.Claims) (Role, error) {
+	for _, mapping := range o.Spec.ClaimsToRoles {
+		for claimName := range claims {
+			if claimName != mapping.Claim {
+				continue
+			}
+
+			// we found a claim for which we have a matching value in our mapping
+			claimValue, ok, _ := claims.StringClaim(claimName)
+			if ok && claimValue == mapping.Value {
+				// check if we have a role template for this match
+				roleTemplate := mapping.RoleTemplate
+				if roleTemplate != nil {
+					// at the moment, only allow templating in name and logins
+					executedName, err := executeTemplate(roleTemplate.Name, claims)
+					if err != nil {
+						return nil, trace.Wrap(err)
+					}
+					executedLogins, err := executeTemplates(roleTemplate.Logins, claims)
+					if err != nil {
+						return nil, trace.Wrap(err)
+					}
+
+					role, err := NewRole(executedName, RoleSpecV2{
+						MaxSessionTTL: roleTemplate.MaxSessionTTL,
+						Logins:        executedLogins,
+						NodeLabels:    roleTemplate.NodeLabels,
+						Namespaces:    roleTemplate.Namespaces,
+						Resources:     roleTemplate.Resources,
+						ForwardAgent:  roleTemplate.ForwardAgent,
+					})
+					if err != nil {
+						return nil, trace.Wrap(err)
+					}
+					return role, nil
+				}
+			}
+		}
+	}
+
+	return nil, trace.Errorf("unable to create role from template")
+}
+
 // Check returns nil if all parameters are great, err otherwise
 func (o *OIDCConnectorV2) Check() error {
 	if o.Metadata.Name == "" {
@@ -412,7 +463,7 @@ type ClaimMapping struct {
 	// Roles is a list of teleport roles to match
 	Roles []string `json:"roles,omitempty"`
 	// RoleTemplate is
-	RoleTemplate RoleTemplate `json:"role_template,omitempty"`
+	RoleTemplate *RoleTemplate `json:"role_template,omitempty"`
 }
 
 // ClaimMappingSchema is JSON schema for claim mapping
