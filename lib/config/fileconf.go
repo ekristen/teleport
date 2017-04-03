@@ -707,11 +707,6 @@ func (o *OIDCConnector) Parse() (services.OIDCConnector, error) {
 	return v2, nil
 }
 
-// Check makes sure we have valid OIDC connector configuration.
-func (o *OIDCConnector) Check() error {
-	return nil
-}
-
 type U2F struct {
 	EnabledFlag string   `yaml:"enabled"`
 	AppID       string   `yaml:"app_id,omitempty"`
