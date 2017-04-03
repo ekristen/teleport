@@ -217,6 +217,29 @@ func (s *AuthSuite) TestBadTokens(c *C) {
 	c.Assert(err, NotNil)
 }
 
+func (s *AuthSuite) TestBuildRolesInvalid(c *C) {
+	// create a connector
+	oidcConnector := services.NewOIDCConnector("example", services.OIDCConnectorSpecV2{
+		IssuerURL:    "https://www.exmaple.com",
+		ClientID:     "example-client-id",
+		ClientSecret: "example-client-secret",
+		RedirectURL:  "https://localhost:3080/v1/webapi/oidc/callback",
+		Display:      "sign in with example.com",
+		Scope:        []string{"foo", "bar"},
+	})
+
+	// create some claims
+	var claims = make(jose.Claims)
+	claims.Add("roles", "teleport-user")
+	claims.Add("email", "foo@example.com")
+	claims.Add("nickname", "foo")
+	claims.Add("full_name", "foo bar")
+
+	// try and build roles should be invalid since we have no mappings
+	_, err := s.a.buildRoles(oidcConnector, claims)
+	c.Assert(err, NotNil)
+}
+
 func (s *AuthSuite) TestBuildRolesStatic(c *C) {
 	// create a connector
 	oidcConnector := services.NewOIDCConnector("example", services.OIDCConnectorSpecV2{
