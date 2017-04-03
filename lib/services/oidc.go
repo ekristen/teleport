@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"text/template"
 
+	"github.com/gravitational/teleport/lib/defaults"
 	"github.com/gravitational/teleport/lib/utils"
 
 	"github.com/coreos/go-oidc/jose"
@@ -75,6 +76,18 @@ type OIDCConnector interface {
 	SetClaimsToRoles([]ClaimMapping)
 	// SetDisplay sets friendly name for this provider.
 	SetDisplay(string)
+}
+
+func NewOIDCConnector(name string, spec OIDCConnectorSpecV2) OIDCConnector {
+	return &OIDCConnectorV2{
+		Kind:    KindOIDCConnector,
+		Version: V2,
+		Metadata: Metadata{
+			Name:      name,
+			Namespace: defaults.Namespace,
+		},
+		Spec: spec,
+	}
 }
 
 var connectorMarshaler OIDCConnectorMarshaler = &TeleportOIDCConnectorMarshaler{}
