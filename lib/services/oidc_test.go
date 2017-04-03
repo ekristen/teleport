@@ -55,6 +55,7 @@ func (s *OIDCSuite) TestUnmarshal(c *check.C) {
             "value": "teleport-user",
             "role_template": {
               "name": "{{index . \"email\"}}",
+              "namespaces": [ "default" ],
               "max_session_ttl": "90h0m0s",
               "logins": ["{{index . \"nickname\"}}", "root"],
               "node_labels": {
@@ -85,11 +86,12 @@ func (s *OIDCSuite) TestUnmarshal(c *check.C) {
 					Claim: "roles",
 					Value: "teleport-user",
 					RoleTemplate: &RoleTemplate{
-						Name:   `{{index . "email"}}`,
-						Logins: []string{`{{index . "nickname"}}`, `root`},
-						// TODO(russjones): These two need to be added back and work...
-						//MaxSessionTTL: NewDuration(90 * time.Hour),
-						//NodeLabels:    map[string]string{"*": "*"},
+						Name:          `{{index . "email"}}`,
+						Logins:        []string{`{{index . "nickname"}}`, `root`},
+						MaxSessionTTL: NewDuration(90 * time.Hour),
+						NodeLabels:    map[string]string{"*": "*"},
+						Namespaces:    []string{"default"},
+						ForwardAgent:  false,
 					},
 				},
 			},
@@ -159,11 +161,12 @@ func (s *OIDCSuite) TestRoleFromTemplate(c *check.C) {
 					Claim: "roles",
 					Value: "teleport-user",
 					RoleTemplate: &RoleTemplate{
-						Name:   `{{index . "email"}}`,
-						Logins: []string{`{{index . "nickname"}}`, `root`},
-						// TODO(russjones): These two need to be added back and work...
-						//MaxSessionTTL: NewDuration(90 * time.Hour),
-						//NodeLabels:    map[string]string{"*": "*"},
+						Name:          `{{index . "email"}}`,
+						Logins:        []string{`{{index . "nickname"}}`, `root`},
+						MaxSessionTTL: NewDuration(30 * time.Hour),
+						NodeLabels:    map[string]string{"*": "*"},
+						Namespaces:    []string{"default"},
+						ForwardAgent:  false,
 					},
 				},
 			},
@@ -181,14 +184,12 @@ func (s *OIDCSuite) TestRoleFromTemplate(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	outRole, err := NewRole("foo@example.com", RoleSpecV2{
-		Logins: []string{"foo", "root"},
-		// TODO(russjones): Why 30h here?
+		Logins:        []string{"foo", "root"},
 		MaxSessionTTL: NewDuration(30 * time.Hour),
-		// TODO(russjones): We should set these to something?
-		NodeLabels:   nil,
-		Namespaces:   nil,
-		Resources:    nil,
-		ForwardAgent: false,
+		NodeLabels:    map[string]string{"*": "*"},
+		Namespaces:    []string{"default"},
+		Resources:     nil,
+		ForwardAgent:  false,
 	})
 	c.Assert(err, check.IsNil)
 	c.Assert(role, check.DeepEquals, outRole)
