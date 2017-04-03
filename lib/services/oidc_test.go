@@ -101,6 +101,44 @@ func (s *OIDCSuite) TestUnmarshal(c *check.C) {
 	c.Assert(oc, check.DeepEquals, &output)
 }
 
+func (s *OIDCSuite) TestUnmarshalInvalid(c *check.C) {
+	input := `
+      {
+        "kind": "oidc",
+        "version": "v2",
+        "metadata": {
+          "name": "google"
+        },
+        "spec": {
+          "issuer_url": "https://accounts.google.com",
+          "client_id": "id-from-google.apps.googleusercontent.com",
+          "client_secret": "secret-key-from-google",
+          "redirect_url": "https://localhost:3080/v1/webapi/oidc/callback",
+          "display": "whatever",
+          "scope": ["roles"],
+          "claims_to_roles": [{
+            "claim": "roles",
+            "value": "teleport-user",
+			"roles": [ "foo", "bar", "baz" ],
+            "role_template": {
+              "name": "{{index . \"email\"}}",
+              "max_session_ttl": "90h0m0s",
+              "logins": ["{{index . \"nickname\"}}", "root"],
+              "node_labels": {
+                "*": "*"
+              }
+            }
+          }]
+        }
+      }
+	`
+
+	oc, err := GetOIDCConnectorMarshaler().UnmarshalOIDCConnector([]byte(input))
+	c.Assert(err, check.IsNil)
+	err = oc.Check()
+	c.Assert(err, check.NotNil)
+}
+
 func (s *OIDCSuite) TestRoleFromTemplate(c *check.C) {
 	oidcConnector := OIDCConnectorV2{
 		Kind:    KindOIDCConnector,
