@@ -794,8 +794,8 @@ func (a *AuthServer) buildRoles(connector services.OIDCConnector, claims jose.Cl
 		// upsert templated role
 		err = a.Access.UpsertRole(role)
 		if err != nil {
-			log.Warningf("[OIDC] Unable to upsert templated role")
-			return nil, trace.AccessDenied("unable to upsert templated role")
+			log.Warningf("[OIDC] Unable to upsert templated role for connector: %q", connector.GetName())
+			return nil, trace.AccessDenied("unable to upsert templated role: %q", connector.GetName())
 		}
 
 		roles = []string{role.GetName()}
