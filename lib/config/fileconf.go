@@ -618,7 +618,7 @@ type ClaimMapping struct {
 	Roles []string `yaml:"roles,omitempty"`
 	// RoleTemplate is a template for a role that will be filled
 	// with data from claims.
-	RoleTemplate RoleTemplate `yaml:"role_template,omitempty"`
+	RoleTemplate *RoleTemplate `yaml:"role_template,omitempty"`
 }
 
 type RoleTemplate struct {
@@ -664,13 +664,31 @@ func (o *OIDCConnector) Parse() (services.OIDCConnector, error) {
 
 	var mappings []services.ClaimMapping
 	for _, c := range o.ClaimsToRoles {
-		roles := make([]string, len(c.Roles))
-		copy(roles, c.Roles)
+		var roles []string
+		if len(c.Roles) > 0 {
+			roles = append(roles, c.Roles...)
+		}
+
+		var roleTemplate *services.RoleTemplate
+		if c.RoleTemplate != nil {
+			roleTemplate = &services.RoleTemplate{
+				Name:          c.RoleTemplate.Name,
+				MaxSessionTTL: services.NewDuration(c.RoleTemplate.MaxSessionTTL),
+				ForwardAgent:  c.RoleTemplate.ForwardAgent,
+				Logins:        c.RoleTemplate.Logins,
+				NodeLabels:    c.RoleTemplate.NodeLabels,
+				Namespaces:    c.RoleTemplate.Namespaces,
+				Resources:     c.RoleTemplate.Resources,
+			}
+		}
+
 		mappings = append(mappings, services.ClaimMapping{
-			Claim: c.Claim,
-			Value: c.Value,
-			Roles: roles,
+			Claim:        c.Claim,
+			Value:        c.Value,
+			Roles:        roles,
+			RoleTemplate: roleTemplate,
 		})
+
 	}
 
 	other := &services.OIDCConnectorV1{

@@ -179,7 +179,7 @@ auth_service:
 						ClaimMapping{
 							Claim: "roles",
 							Value: "teleport-user",
-							RoleTemplate: RoleTemplate{
+							RoleTemplate: &RoleTemplate{
 								Name:          "{{.user}}",
 								MaxSessionTTL: 90 * 60 * time.Minute,
 								Logins:        []string{"{{.claims.nickname}}"},

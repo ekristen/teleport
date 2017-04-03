@@ -412,6 +412,25 @@ func (o *OIDCConnectorV2) Check() error {
 	if o.Spec.ClientSecret == "" {
 		return trace.BadParameter("ClientSecret: missing client secret")
 	}
+
+	// make sure claim mappings have either roles or a role template
+	for _, v := range o.Spec.ClaimsToRoles {
+		hasRoles := false
+		if len(v.Roles) > 0 {
+			hasRoles = true
+		}
+		hasRoleTemplate := false
+		if v.RoleTemplate != nil {
+			hasRoleTemplate = true
+		}
+
+		// we either need to have roles or role templates not both or neither
+		// ! ( hasRoles XOR hasRoleTemplate )
+		if hasRoles == hasRoleTemplate {
+			return trace.BadParameter("need roles or role template (not both or none)")
+		}
+	}
+
 	return nil
 }
 
