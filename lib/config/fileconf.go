@@ -688,7 +688,6 @@ func (o *OIDCConnector) Parse() (services.OIDCConnector, error) {
 			Roles:        roles,
 			RoleTemplate: roleTemplate,
 		})
-
 	}
 
 	other := &services.OIDCConnectorV1{

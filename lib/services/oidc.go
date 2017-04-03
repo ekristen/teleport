@@ -547,13 +547,13 @@ var ClaimMappingSchema = fmt.Sprintf(`{
 }`, RoleTemplateSchema)
 
 type RoleTemplate struct {
-	Name          string              `yaml:name`
-	MaxSessionTTL Duration            `yaml:"max_session_ttl"`
-	ForwardAgent  bool                `yaml:"forward_agent"`
-	Logins        []string            `yaml:"logins,omitempty"`
-	NodeLabels    map[string]string   `yaml:"node_labels,omitempty"`
-	Namespaces    []string            `yaml:"namespaces,omitempty"`
-	Resources     map[string][]string `yaml:"resources,omitempty"`
+	Name          string              `json:"name"`
+	MaxSessionTTL Duration            `json:"max_session_ttl"`
+	ForwardAgent  bool                `json:"forward_agent"`
+	Logins        []string            `json:"logins,omitempty"`
+	NodeLabels    map[string]string   `json:"node_labels,omitempty"`
+	Namespaces    []string            `json:"namespaces,omitempty"`
+	Resources     map[string][]string `json:"resources,omitempty"`
 }
 
 const RoleTemplateSchema = `{
