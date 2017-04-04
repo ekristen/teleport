@@ -167,7 +167,7 @@ func ReadConfig(reader io.Reader) (*FileConfig, error) {
 	}
 	var fc FileConfig
 	if err = yaml.Unmarshal(bytes, &fc); err != nil {
-		return nil, trace.Wrap(err, "failed to parse Teleport configuration")
+		return nil, trace.BadParameter("failed to parse Teleport configuration: %v", err)
 	}
 	// now check for unknown (misspelled) config keys:
 	var validateKeys func(m YAMLMap) error
@@ -618,18 +618,19 @@ type ClaimMapping struct {
 	Roles []string `yaml:"roles,omitempty"`
 	// RoleTemplate is a template for a role that will be filled
 	// with data from claims.
-	RoleTemplate *RoleTemplate `yaml:"role_template,omitempty"`
+	//RoleTemplate *RoleTemplate `yaml:"role_template,omitempty"`
+	RoleTemplate *services.RoleV2 `yaml:"role_template,omitempty"`
 }
 
-type RoleTemplate struct {
-	Name          string              `yaml:name`
-	MaxSessionTTL time.Duration       `yaml:"max_session_ttl"`
-	ForwardAgent  bool                `yaml:"forward_agent"`
-	Logins        []string            `yaml:"logins,omitempty"`
-	NodeLabels    map[string]string   `yaml:"node_labels,omitempty"`
-	Namespaces    []string            `yaml:"namespaces,omitempty"`
-	Resources     map[string][]string `yaml:"resources,omitempty"`
-}
+//type RoleTemplate struct {
+//	Name          string              `yaml:name`
+//	MaxSessionTTL time.Duration       `yaml:"max_session_ttl"`
+//	ForwardAgent  bool                `yaml:"forward_agent"`
+//	Logins        []string            `yaml:"logins,omitempty"`
+//	NodeLabels    map[string]string   `yaml:"node_labels,omitempty"`
+//	Namespaces    []string            `yaml:"namespaces,omitempty"`
+//	Resources     map[string][]string `yaml:"resources,omitempty"`
+//}
 
 // OIDCConnector specifies configuration fo Open ID Connect compatible external
 // identity provider, e.g. google in some organisation
@@ -670,17 +671,17 @@ func (o *OIDCConnector) Parse() (services.OIDCConnector, error) {
 		}
 
 		var roleTemplate *services.RoleTemplate
-		if c.RoleTemplate != nil {
-			roleTemplate = &services.RoleTemplate{
-				Name:          c.RoleTemplate.Name,
-				MaxSessionTTL: services.NewDuration(c.RoleTemplate.MaxSessionTTL),
-				ForwardAgent:  c.RoleTemplate.ForwardAgent,
-				Logins:        c.RoleTemplate.Logins,
-				NodeLabels:    c.RoleTemplate.NodeLabels,
-				Namespaces:    c.RoleTemplate.Namespaces,
-				Resources:     c.RoleTemplate.Resources,
-			}
-		}
+		//if c.RoleTemplate != nil {
+		//	roleTemplate = &services.RoleTemplate{
+		//		Name:          c.RoleTemplate.Name,
+		//		MaxSessionTTL: services.NewDuration(c.RoleTemplate.MaxSessionTTL),
+		//		ForwardAgent:  c.RoleTemplate.ForwardAgent,
+		//		Logins:        c.RoleTemplate.Logins,
+		//		NodeLabels:    c.RoleTemplate.NodeLabels,
+		//		Namespaces:    c.RoleTemplate.Namespaces,
+		//		Resources:     c.RoleTemplate.Resources,
+		//	}
+		//}
 
 		mappings = append(mappings, services.ClaimMapping{
 			Claim:        c.Claim,

@@ -20,6 +20,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gravitational/teleport/lib/defaults"
+	"github.com/gravitational/teleport/lib/services"
+
 	"gopkg.in/check.v1"
 )
 
@@ -154,13 +157,22 @@ auth_service:
       scope: [ "roles" ]
       claims_to_roles:
         - claim: roles
-          value: teleport-user
+          value: teleport-admin
           role_template:
-            name: "{{.user}}"
-            max_session_ttl: 90h0m0s
-            logins: ["{{.claims.nickname}}"]
-            node_labels:
-              "*": "*"
+            kind: role
+            version: v1
+            metadata:
+              description: "dynamic admin role"
+              name: "{{index . \"email\"}}"
+              namespace: "default"
+            spec:
+              namespaces: [ "*" ]
+              max_session_ttl: 90h0m0s
+              logins: [ "{{index . \"nickname\"}}", root ]
+              node_labels:
+                "*": "*"
+              resources:
+                "*": [ "read", "write" ]
 `,
 
 			&AuthenticationConfig{
@@ -178,12 +190,21 @@ auth_service:
 					ClaimsToRoles: []ClaimMapping{
 						ClaimMapping{
 							Claim: "roles",
-							Value: "teleport-user",
-							RoleTemplate: &RoleTemplate{
-								Name:          "{{.user}}",
-								MaxSessionTTL: 90 * 60 * time.Minute,
-								Logins:        []string{"{{.claims.nickname}}"},
-								NodeLabels:    map[string]string{"*": "*"},
+							Value: "teleport-admin",
+							RoleTemplate: &services.RoleV2{
+								Kind:    services.KindRole,
+								Version: services.V2,
+								Metadata: services.Metadata{
+									Name:      `{{index . "email"}}`,
+									Namespace: defaults.Namespace,
+								},
+								Spec: services.RoleSpecV2{
+									MaxSessionTTL: services.NewDuration(90 * 60 * time.Minute),
+									Logins:        []string{`{{index . "nickname"}}`, `root`},
+									NodeLabels:    map[string]string{"*": "*"},
+									Namespaces:    []string{"*"},
+									Resources:     map[string][]string{"*": []string{"read", "write"}},
+								},
 							},
 						},
 					},
@@ -200,6 +221,11 @@ auth_service:
 
 		fc, err := ReadFromString(encodedConfigString)
 		c.Assert(err, check.IsNil, comment)
+
+		if fc.Auth.Authentication.OIDC != nil {
+			fmt.Printf("INN RoleTemplate: %v\n", fc.Auth.Authentication.OIDC.ClaimsToRoles[0].RoleTemplate)
+			fmt.Printf("OUT RoleTemplate: %v\n", tt.outAuthenticationConfig.OIDC.ClaimsToRoles[0].RoleTemplate)
+		}
 
 		c.Assert(fc.Auth.Authentication, check.DeepEquals, tt.outAuthenticationConfig, comment)
 	}
